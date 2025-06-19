@@ -35,8 +35,15 @@ def load_whisper_model(model_name: str = 'large', download_root = 'models/ASR/wh
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
     logger.info(f'Loading WhisperX model: {model_name}')
     t_start = time.time()
+    # 检查是否需要使用安全的计算类型
+    force_safe_compute = os.getenv('FORCE_SAFE_COMPUTE', 'false').lower() == 'true'
+    
     if device=='cpu':
         whisper_model = whisperx.load_model(model_name, download_root=download_root, device=device, compute_type='int8')
+    elif force_safe_compute:
+        # 使用float32避免cuDNN问题
+        logger.warning("Using float32 compute type for CUDA to avoid cuDNN issues")
+        whisper_model = whisperx.load_model(model_name, download_root=download_root, device=device, compute_type='float32')
     else:
         whisper_model = whisperx.load_model(model_name, download_root=download_root, device=device)
     t_end = time.time()

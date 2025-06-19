@@ -69,7 +69,13 @@ def transcribe_audio(method, folder, model_name: str = 'large', download_root='m
     
     logger.info(f'Transcribing {wav_path}')
     if device == 'auto':
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # 检查环境变量是否强制使用CPU
+        force_cpu = os.getenv('FORCE_CPU_ASR', 'false').lower() == 'true'
+        if force_cpu:
+            device = 'cpu'
+            logger.warning("Forced to use CPU for ASR due to FORCE_CPU_ASR=true")
+        else:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
     if method == 'WhisperX':
         transcript = whisperx_transcribe_audio(wav_path, model_name, download_root, device, batch_size, diarization, min_speakers, max_speakers)
