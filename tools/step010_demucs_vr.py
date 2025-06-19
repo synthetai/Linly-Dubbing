@@ -55,6 +55,15 @@ def load_model(model_name: str = "htdemucs_ft", device: str = 'auto', progress: 
     t_start = time.time()
 
     device_to_use = auto_device if device == 'auto' else device
+    logger.info(f'使用设备: {device_to_use}')
+    logger.info(f'模型配置: shifts={shifts}, progress={progress}')
+    
+    # 检查是否强制使用CPU
+    force_cpu_demucs = os.getenv('FORCE_CPU_DEMUCS', 'false').lower() == 'true'
+    if force_cpu_demucs:
+        device_to_use = 'cpu'
+        logger.warning("强制使用CPU进行音频分离（性能较慢）")
+    
     separator = Separator(model_name, device=device_to_use, progress=progress, shifts=shifts)
 
     # 存储当前模型配置
@@ -185,6 +194,15 @@ def separate_all_audio_under_folder(root_folder: str, model_name: str = "htdemuc
     """
     global separator
     vocal_output_path, instruments_output_path = None, None
+    
+    # 检查是否使用快速模式
+    fast_mode = os.getenv('FAST_DEMUCS_MODE', 'false').lower() == 'true'
+    if fast_mode:
+        model_name = "mdx_extra"  # 使用更快的模型
+        shifts = 1  # 减少shifts提升速度
+        logger.warning(f"快速模式：使用模型 {model_name}, shifts={shifts}")
+    
+    logger.info(f"开始音频分离：模型={model_name}, 设备={device}, shifts={shifts}")
 
     try:
         for subdir, dirs, files in os.walk(root_folder):
