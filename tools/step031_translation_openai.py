@@ -7,10 +7,6 @@ from loguru import logger
 # 加载环境变量
 load_dotenv()
 
-extra_body = {
-    'repetition_penalty': 1.1,
-}
-
 def openai_response(messages):
     """
     使用OpenAI API进行翻译
@@ -44,12 +40,11 @@ def openai_response(messages):
             api_key=api_key
         )
         
-        # 调用API
+        # 调用API - 移除了不支持的extra_body参数
         response = client.chat.completions.create(
             model=model_name,
             messages=messages,
-            timeout=240,
-            extra_body=extra_body
+            timeout=240
         )
         
         return response.choices[0].message.content
