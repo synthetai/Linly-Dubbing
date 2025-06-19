@@ -30,7 +30,13 @@ def openai_response(messages):
         if not api_key:
             raise ValueError("未设置OPENAI_API_KEY环境变量")
         
-        base_url = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
+        # 获取base_url并验证
+        base_url = os.getenv('OPENAI_API_BASE', '').strip()
+        if not base_url or not (base_url.startswith('http://') or base_url.startswith('https://')):
+            base_url = 'https://api.openai.com/v1'
+            logger.info(f"使用默认OpenAI API地址: {base_url}")
+        else:
+            logger.info(f"使用自定义OpenAI API地址: {base_url}")
         
         # 创建OpenAI客户端
         client = OpenAI(
