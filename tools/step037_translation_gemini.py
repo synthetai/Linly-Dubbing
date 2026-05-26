@@ -32,8 +32,8 @@ def gemini_response(messages):
         # 创建客户端
         client = genai.Client(api_key=api_key)
 
-        # 获取模型名称，默认使用 gemini-2.5-flash
-        model_name = os.getenv('GEMINI_MODEL_NAME', 'gemini-2.5-flash')
+        # 获取模型名称，默认使用 gemini-3.5-flash
+        model_name = os.getenv('GEMINI_MODEL_NAME', 'gemini-3.5-flash')
         logger.info(f"使用 Gemini 模型: {model_name}")
 
         # 转换消息格式

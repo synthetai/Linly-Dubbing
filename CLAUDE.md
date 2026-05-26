@@ -91,7 +91,7 @@ pip install -r requirements_f5tts.txt
 - `OPENAI_API_KEY`: OpenAI API 密钥（用于 GPT 翻译）
 - `OPENAI_API_BASE`: 自部署 OpenAI 端点
 - `GEMINI_API_KEY`: Google Gemini API 密钥（从 https://aistudio.google.com/app/apikey 获取，用于 Gemini 翻译）
-- `GEMINI_MODEL_NAME`: Gemini 模型名称（默认 `gemini-2.5-flash`，可选 `gemini-1.5-pro`, `gemini-1.5-flash`）
+- `GEMINI_MODEL_NAME`: Gemini 模型名称（默认 `gemini-3.5-flash`，可选 `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.5-pro`, `gemini-2.0-flash`）
 - `BAIDU_API_KEY` / `BAIDU_SECRET_KEY`: 百度文心一言 API（免费）
 - `BYTEDANCE_APPID` / `BYTEDANCE_ACCESS_TOKEN`: 火山引擎 TTS
 - `HF_ENDPOINT`: Hugging Face 镜像端点（如 `https://hf-mirror.com`）
