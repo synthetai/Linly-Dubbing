@@ -58,10 +58,18 @@ def handle_cookie_upload(cookie_file):
     try:
         target_path = os.path.join(os.getcwd(), 'cookies.txt')
 
-        # 获取上传的原始文件名
-        upload_filename = os.path.basename(cookie_file.name) if hasattr(cookie_file, 'name') else 'unknown'
+        # Gradio 4.x: gr.File(type='filepath') 直接返回字符串路径
+        # Gradio 3.x: 返回带 .name 属性的文件对象
+        if isinstance(cookie_file, str):
+            source_path = cookie_file
+        elif hasattr(cookie_file, 'name'):
+            source_path = cookie_file.name
+        else:
+            source_path = str(cookie_file)
+
+        upload_filename = os.path.basename(source_path)
         logger.info(f'handle_cookie_upload: 上传的文件名: {upload_filename}')
-        logger.info(f'handle_cookie_upload: 上传的文件路径: {cookie_file.name}')
+        logger.info(f'handle_cookie_upload: 上传的文件路径: {source_path}')
         logger.info(f'handle_cookie_upload: 目标路径: {target_path}')
 
         # 检查是否存在旧文件
@@ -75,7 +83,7 @@ def handle_cookie_upload(cookie_file):
             logger.info(f'handle_cookie_upload: 将覆盖旧文件')
 
         # 读取源文件内容
-        with open(cookie_file.name, 'r', encoding='utf-8') as f:
+        with open(source_path, 'r', encoding='utf-8') as f:
             source_content = f.read()
 
         source_size = len(source_content)
@@ -221,9 +229,9 @@ full_auto_interface = gr.Interface(
 
         gr.Radio(['htdemucs', 'htdemucs_ft', 'htdemucs_6s', 'hdemucs_mmi', 'mdx', 'mdx_extra', 'mdx_q', 'mdx_extra_q', 'SIG'], label='模型', value='htdemucs_ft'),
         gr.Radio(['auto', 'cuda', 'cpu'], label='计算设备', value='auto'),
-        gr.Slider(minimum=0, maximum=10, step=1, label='移位次数 Number of shifts', value=5),
+        gr.Slider(minimum=0, maximum=10, step=1, label='移位次数 Number of shifts', value=1),
 
-        gr.Dropdown(['WhisperX', 'FunASR'], label='ASR模型选择', value='WhisperX'),
+        gr.Dropdown(['WhisperX', 'FunASR', 'VolcEngine'], label='ASR模型选择', value='WhisperX'),
         gr.Radio(['large', 'medium', 'small', 'base', 'tiny'], label='WhisperX模型大小', value='large'),
         gr.Slider(minimum=1, maximum=128, step=1, label='批处理大小 Batch Size', value=32),
         gr.Checkbox(label='分离多个说话人', value=True),
@@ -240,7 +248,7 @@ full_auto_interface = gr.Interface(
         gr.Checkbox(label='添加字幕', value=True),
         gr.Slider(minimum=0.5, maximum=2, step=0.05, label='加速倍数', value=1.00),
         gr.Slider(minimum=1, maximum=60, step=1, label='帧率', value=30),
-        gr.Audio(label='背景音乐', sources=['upload']),
+        gr.Audio(label='背景音乐'),
         gr.Slider(minimum=0, maximum=1, step=0.05, label='背景音乐音量', value=0.5),
         gr.Slider(minimum=0, maximum=1, step=0.05, label='视频音量', value=1.0),
         gr.Radio(['4320p', '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'], label='分辨率', value='1080p'),
@@ -263,7 +271,6 @@ full_auto_interface = gr.Interface(
         ),
     ],
     outputs=[gr.Text(label='合成状态'), gr.Video(label='合成视频样例结果')],
-    allow_flagging='never',
 )    
 
 # 包装下载函数以支持 cookie 上传
@@ -293,9 +300,8 @@ download_interface = gr.Interface(
     outputs=[
         gr.Textbox(label='下载状态'), 
         gr.Video(label='示例视频'), 
-        gr.Json(label='下载信息')
+        gr.JSON(label='下载信息')
     ],
-    allow_flagging='never',
 )
 
 # 人声分离接口
@@ -306,14 +312,13 @@ demucs_interface = gr.Interface(
         gr.Radio(['htdemucs', 'htdemucs_ft', 'htdemucs_6s', 'hdemucs_mmi', 'mdx', 'mdx_extra', 'mdx_q', 'mdx_extra_q', 'SIG'], label='模型', value='htdemucs_ft'),
         gr.Radio(['auto', 'cuda', 'cpu'], label='计算设备', value='auto'),
         gr.Checkbox(label='显示进度条', value=True),
-        gr.Slider(minimum=0, maximum=10, step=1, label='移位次数 Number of shifts', value=5),
+        gr.Slider(minimum=0, maximum=10, step=1, label='移位次数 Number of shifts', value=1),
     ],
     outputs=[
         gr.Text(label='分离结果状态'), 
         gr.Audio(label='人声音频'), 
         gr.Audio(label='伴奏音频')
     ],
-    allow_flagging='never',
 )
 
 # AI智能语音识别接口
@@ -321,7 +326,7 @@ asr_inference = gr.Interface(
     fn=transcribe_all_audio_under_folder,
     inputs=[
         gr.Textbox(label='视频文件夹', value='videos'),
-        gr.Dropdown(['WhisperX', 'FunASR'], label='ASR模型选择', value='WhisperX'),
+        gr.Dropdown(['WhisperX', 'FunASR', 'VolcEngine'], label='ASR模型选择', value='WhisperX'),
         gr.Radio(['large', 'medium', 'small', 'base', 'tiny'], label='WhisperX模型大小', value='large'),
         gr.Radio(['auto', 'cuda', 'cpu'], label='计算设备', value='auto'),
         gr.Slider(minimum=1, maximum=128, step=1, label='批处理大小 Batch Size', value=32),
@@ -331,9 +336,8 @@ asr_inference = gr.Interface(
     ],
     outputs=[
         gr.Text(label='语音识别状态'), 
-        gr.Json(label='识别结果详情')
+        gr.JSON(label='识别结果详情')
     ],
-    allow_flagging='never',
 )
 
 # 翻译字幕接口
@@ -346,10 +350,9 @@ translation_interface = gr.Interface(
     ],
     outputs=[
         gr.Text(label='翻译状态'), 
-        gr.Json(label='总结结果'), 
-        gr.Json(label='翻译结果')
+        gr.JSON(label='总结结果'), 
+        gr.JSON(label='翻译结果')
     ],
-    allow_flagging='never',
 )
 
 # 包装函数以支持 Minimax voice_id 参数
@@ -387,7 +390,6 @@ tts_interface = gr.Interface(
         gr.Audio(label='合成语音'), 
         gr.Audio(label='原始音频')
     ],
-    allow_flagging='never',
 )
 
 # 视频合成接口
@@ -398,7 +400,7 @@ synthesize_video_interface = gr.Interface(
         gr.Checkbox(label='添加字幕', value=True),
         gr.Slider(minimum=0.5, maximum=2, step=0.05, label='加速倍数', value=1.00),
         gr.Slider(minimum=1, maximum=60, step=1, label='帧率', value=30),
-        gr.Audio(label='背景音乐', sources=['upload'], type='filepath'),
+        gr.Audio(label='背景音乐', type='filepath'),
         gr.Slider(minimum=0, maximum=1, step=0.05, label='背景音乐音量', value=0.5),
         gr.Slider(minimum=0, maximum=1, step=0.05, label='视频音量', value=1.0),
         gr.Radio(['4320p', '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'], label='分辨率', value='1080p'),
@@ -408,7 +410,6 @@ synthesize_video_interface = gr.Interface(
         gr.Text(label='合成状态'), 
         gr.Video(label='合成视频')
     ],
-    allow_flagging='never',
 )
 
 linly_talker_interface = gr.Interface(
@@ -427,7 +428,6 @@ linly_talker_interface = gr.Interface(
 my_theme = gr.themes.Soft()
 # 应用程序界面
 app = gr.TabbedInterface(
-    theme=my_theme,
     interface_list=[
         full_auto_interface,
         download_interface,

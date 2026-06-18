@@ -16,25 +16,18 @@ import tempfile
 
 # Minimax TTS 全局配置
 minimax_api_key = None
-minimax_group_id = None
-minimax_api_base = "https://api.minimaxi.chat/v1/t2a_v2"
+minimax_api_base = "https://api.minimax.io/v1/t2a_v2"
 
 def init_minimax_api():
     """初始化Minimax API配置"""
-    global minimax_api_key, minimax_group_id
-    
-    # 从环境变量读取API Key和Group ID
-    minimax_api_key = os.getenv('MINIMAX_API_KEY')
-    minimax_group_id = os.getenv('MINIMAX_GROUP_ID')
-    
+    global minimax_api_key
+
+    minimax_api_key = (os.getenv('MINIMAX_API_KEY') or '').strip()
+
     if not minimax_api_key:
         logger.error("Minimax API Key未设置，请在.env文件中添加 MINIMAX_API_KEY")
         return False
-    
-    if not minimax_group_id:
-        logger.warning("Minimax Group ID未设置，将使用默认值。建议在.env文件中添加 MINIMAX_GROUP_ID")
-        minimax_group_id = "default"  # 设置默认值
-    
+
     logger.info("Minimax API初始化成功")
     return True
 
@@ -53,7 +46,7 @@ language_map = {
 }
 
 # Minimax TTS 模型配置 - 仅支持最新模型
-TTS_MODEL = 'speech-2.5-hd-preview'
+TTS_MODEL = 'speech-2.6-hd'
 
 # 默认音色ID（Minimax官方提供）
 DEFAULT_VOICE_ID = 'cobra_design_20250717_162427_683071'  # 都市白领
@@ -79,7 +72,7 @@ def tts_with_minimax(text, voice_id, target_language='中文', speed=1.0, volume
             return None
     
     try:
-        url = f"{minimax_api_base}?GroupId={minimax_group_id}"
+        url = minimax_api_base
         headers = {
             "Authorization": f"Bearer {minimax_api_key}",
             "Content-Type": "application/json",
@@ -103,7 +96,7 @@ def tts_with_minimax(text, voice_id, target_language='中文', speed=1.0, volume
             "model": TTS_MODEL,  # 使用固定的模型
             "text": text,
             "voice_setting": voice_setting,
-            "language_boost": language_map.get(target_language, "Chinese"),
+            "language_boost": "auto",
             "audio_setting": {
                 "sample_rate": 32000,
                 "bitrate": 128000,

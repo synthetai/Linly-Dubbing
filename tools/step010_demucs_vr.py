@@ -8,7 +8,14 @@ import torch
 import gc
 
 # 全局变量
-auto_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+def _detect_device():
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        return torch.device('mps')
+    return torch.device('cpu')
+
+auto_device = _detect_device()
 separator = None
 model_loaded = False  # 新增标志，跟踪模型是否已加载
 current_model_config = {}  # 新增变量，存储当前加载模型的配置
