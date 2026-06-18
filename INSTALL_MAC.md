@@ -97,7 +97,7 @@ pip install \
 ## 第五步：安装 Demucs（人声分离）
 
 ```bash
-pip install demucs
+pip install -e submodules/demucs
 ```
 
 > 项目里 Demucs 是通过 git 子模块管理的，但 pip 版本完全等效，在 Mac 上更易安装。
@@ -137,7 +137,7 @@ cp env.example .env
 ```dotenv
 # ===== 火山引擎 ASR =====
 # 新版控制台只需填 API Key
-VOLCENGINE_ASR_API_KEY=你的APIKey
+VOLCENGINE_ASR_API_KEY=
 VOLCENGINE_ASR_RESOURCE_ID=volc.seedasr.auc
 
 # ===== MinIO 存储（ASR 需要公网可访问的音频 URL）=====
