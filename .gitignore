@@ -164,3 +164,12 @@ models
 videos
 temp
 tmp
+
+# Gradio 临时文件
+.gradio/
+
+# 视频处理输出目录（日期/数字命名）
+[0-9]*/
+
+# 敏感文件
+cookies.txt
