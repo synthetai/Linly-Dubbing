@@ -7,30 +7,41 @@ from loguru import logger
 import numpy as np
 
 from .utils import save_wav, save_wav_norm
-# from .step041_tts_bytedance import tts as bytedance_tts
-from .step042_tts_xtts import tts as xtts_tts
-from .step043_tts_cosyvoice import tts as cosyvoice_tts
-from .step044_tts_edge_tts import tts as edge_tts
 
-# Minimax TTS - 商业API
-try:
-    from .step046_tts_minimax import tts as minimax_tts
-    MINIMAX_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"Minimax TTS not available: {e}")
-    logger.info("Install requests library and set MINIMAX_API_KEY to use Minimax TTS")
-    minimax_tts = None
-    MINIMAX_AVAILABLE = False
+# TTS 引擎全部懒加载，避免启动时因缺少依赖而崩溃
+_xtts_tts = None
+_cosyvoice_tts = None
+_edge_tts = None
+_minimax_tts = None
+_f5tts_tts = None
 
-# F5-TTS - 在安装后启用
-try:
-    from .step045_tts_f5tts import tts as f5tts_tts
-    F5TTS_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"F5-TTS not available: {e}")
-    logger.info("Install F5-TTS with: pip install f5-tts")
-    f5tts_tts = None
-    F5TTS_AVAILABLE = False
+def _load_tts(method):
+    global _xtts_tts, _cosyvoice_tts, _edge_tts, _minimax_tts, _f5tts_tts
+    if method == 'xtts' and _xtts_tts is None:
+        from .step042_tts_xtts import tts as xtts_tts
+        _xtts_tts = xtts_tts
+    elif method == 'cosyvoice' and _cosyvoice_tts is None:
+        from .step043_tts_cosyvoice import tts as cosyvoice_tts
+        _cosyvoice_tts = cosyvoice_tts
+    elif method == 'EdgeTTS' and _edge_tts is None:
+        from .step044_tts_edge_tts import tts as edge_tts
+        _edge_tts = edge_tts
+    elif method == 'minimax' and _minimax_tts is None:
+        from .step046_tts_minimax import tts as minimax_tts
+        _minimax_tts = minimax_tts
+    elif method == 'f5tts' and _f5tts_tts is None:
+        from .step045_tts_f5tts import tts as f5tts_tts
+        _f5tts_tts = f5tts_tts
+
+def _is_available(method):
+    try:
+        _load_tts(method)
+        return True
+    except ImportError:
+        return False
+
+MINIMAX_AVAILABLE = _is_available('minimax')
+F5TTS_AVAILABLE = _is_available('f5tts')
 from .cn_tx import TextNorm
 from audiostretchy.stretch import stretch_audio
 normalizer = TextNorm()
@@ -138,40 +149,41 @@ def generate_wavs(method, folder, target_language='中文', voice='zh-CN-Xiaoxia
             # bytedance_tts(text, output_path, speaker_wav, voice_type='BV701_streaming')
         
         if method == 'bytedance':
-            # bytedance_tts(text, output_path, speaker_wav, target_language = target_language)
             logger.warning("Bytedance TTS not implemented yet")
         elif method == 'xtts':
-            xtts_tts(text, output_path, speaker_wav, target_language = target_language)
+            _load_tts('xtts')
+            _xtts_tts(text, output_path, speaker_wav, target_language = target_language)
         elif method == 'cosyvoice':
-            cosyvoice_tts(text, output_path, speaker_wav, target_language = target_language)
+            _load_tts('cosyvoice')
+            _cosyvoice_tts(text, output_path, speaker_wav, target_language = target_language)
         elif method == 'f5tts':
-            if F5TTS_AVAILABLE and f5tts_tts is not None:
-                success = f5tts_tts(text, output_path, speaker_wav, target_language = target_language)
+            if F5TTS_AVAILABLE:
+                _load_tts('f5tts')
+                success = _f5tts_tts(text, output_path, speaker_wav, target_language = target_language)
                 if not success:
                     logger.error(f'F5-TTS生成失败: {text}')
-                    # 创建一个空的音频文件以避免后续错误
-                    empty_audio = np.zeros(int(0.5 * 24000))  # 0.5秒的静音
+                    empty_audio = np.zeros(int(0.5 * 24000))
                     save_wav(empty_audio, output_path)
                     logger.info(f'已创建静音文件: {output_path}')
             else:
                 logger.error(f'F5-TTS not available. Please install with: pip install f5-tts')
-                # 创建静音文件
-                empty_audio = np.zeros(int(0.5 * 24000))  # 0.5秒的静音
+                empty_audio = np.zeros(int(0.5 * 24000))
                 save_wav(empty_audio, output_path)
                 logger.info(f'已创建静音文件: {output_path}')
         elif method == 'EdgeTTS':
-            success = edge_tts(text, output_path, target_language = target_language, voice = voice)
+            _load_tts('EdgeTTS')
+            success = _edge_tts(text, output_path, target_language = target_language, voice = voice)
             if not success:
                 logger.error(f'EdgeTTS生成失败: {text}')
-                # 创建一个空的音频文件以避免后续错误
-                empty_audio = np.zeros(int(0.5 * 24000))  # 0.5秒的静音
+                empty_audio = np.zeros(int(0.5 * 24000))
                 save_wav(empty_audio, output_path)
                 logger.info(f'已创建静音文件: {output_path}')
         elif method == 'minimax':
-            if MINIMAX_AVAILABLE and minimax_tts is not None:
+            if MINIMAX_AVAILABLE:
+                _load_tts('minimax')
                 # 从kwargs中获取voice_id参数
                 voice_id = kwargs.get('voice_id', None)
-                success = minimax_tts(text, output_path, speaker_wav, target_language=target_language, voice_id=voice_id, **kwargs)
+                success = _minimax_tts(text, output_path, speaker_wav, target_language=target_language, voice_id=voice_id, **kwargs)
                 if not success:
                     logger.error(f'Minimax TTS生成失败: {text}')
                     # 创建一个空的音频文件以避免后续错误

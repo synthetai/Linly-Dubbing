@@ -3,17 +3,12 @@ import os
 import time
 import traceback
 
-import torch
 from loguru import logger
 from .step000_video_downloader import get_info_list_from_url, download_single_video, get_target_folder
 from .step010_demucs_vr import separate_all_audio_under_folder, init_demucs, release_model
 from .step020_asr import transcribe_all_audio_under_folder
-from .step021_asr_whisperx import init_whisperx, init_diarize
-from .step022_asr_funasr import init_funasr
 from .step030_translation import translate_all_transcript_under_folder
 from .step040_tts import generate_all_wavs_under_folder
-from .step042_tts_xtts import init_TTS
-from .step043_tts_cosyvoice import init_cosyvoice
 from .step050_synthesize_video import synthesize_all_video_under_folder
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -31,13 +26,13 @@ models_initialized = {
 def get_available_gpu_memory():
     """获取当前可用的GPU显存大小（GB）"""
     try:
+        import torch
         if torch.cuda.is_available():
-            # 获取当前设备的可用显存
             free_memory = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
-            return free_memory / (1024 ** 3)  # 转换为GB
-        return 0  # 如果没有GPU或CUDA不可用
+            return free_memory / (1024 ** 3)
+        return 0
     except Exception:
-        return 0  # 出错时返回0
+        return 0
 
 
 def initialize_models(tts_method, asr_method, diarization):
@@ -60,16 +55,19 @@ def initialize_models(tts_method, asr_method, diarization):
 
             # TTS模型初始化
             if tts_method == 'xtts' and not models_initialized['xtts']:
+                from .step042_tts_xtts import init_TTS
                 executor.submit(init_TTS)
                 models_initialized['xtts'] = True
                 logger.info("XTTS模型初始化完成")
             elif tts_method == 'cosyvoice' and not models_initialized['cosyvoice']:
+                from .step043_tts_cosyvoice import init_cosyvoice
                 executor.submit(init_cosyvoice)
                 models_initialized['cosyvoice'] = True
                 logger.info("CosyVoice模型初始化完成")
 
             # ASR模型初始化
             if asr_method == 'WhisperX':
+                from .step021_asr_whisperx import init_whisperx, init_diarize
                 if not models_initialized['whisperx']:
                     executor.submit(init_whisperx)
                     models_initialized['whisperx'] = True
@@ -79,6 +77,7 @@ def initialize_models(tts_method, asr_method, diarization):
                     models_initialized['diarize'] = True
                     logger.info("Diarize模型初始化完成")
             elif asr_method == 'FunASR' and not models_initialized['funasr']:
+                from .step022_asr_funasr import init_funasr
                 executor.submit(init_funasr)
                 models_initialized['funasr'] = True
                 logger.info("FunASR模型初始化完成")

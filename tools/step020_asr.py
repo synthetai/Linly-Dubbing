@@ -1,10 +1,7 @@
 
 import os
-import torch
 import numpy as np
 from dotenv import load_dotenv
-from .step021_asr_whisperx import whisperx_transcribe_audio
-from .step022_asr_funasr import funasr_transcribe_audio
 from .utils import save_wav
 import json
 import librosa
@@ -68,19 +65,24 @@ def transcribe_audio(method, folder, model_name: str = 'large', download_root='m
         return False
     
     logger.info(f'Transcribing {wav_path}')
-    if device == 'auto':
-        # 检查环境变量是否强制使用CPU
-        force_cpu = os.getenv('FORCE_CPU_ASR', 'false').lower() == 'true'
-        if force_cpu:
-            device = 'cpu'
-            logger.warning("Forced to use CPU for ASR due to FORCE_CPU_ASR=true")
-        else:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    
+
     if method == 'WhisperX':
+        import torch
+        from .step021_asr_whisperx import whisperx_transcribe_audio
+        if device == 'auto':
+            force_cpu = os.getenv('FORCE_CPU_ASR', 'false').lower() == 'true'
+            device = 'cpu' if force_cpu else ('cuda' if torch.cuda.is_available() else 'cpu')
         transcript = whisperx_transcribe_audio(wav_path, model_name, download_root, device, batch_size, diarization, min_speakers, max_speakers)
     elif method == 'FunASR':
+        import torch
+        from .step022_asr_funasr import funasr_transcribe_audio
+        if device == 'auto':
+            force_cpu = os.getenv('FORCE_CPU_ASR', 'false').lower() == 'true'
+            device = 'cpu' if force_cpu else ('cuda' if torch.cuda.is_available() else 'cpu')
         transcript = funasr_transcribe_audio(wav_path, device, batch_size, diarization)
+    elif method == 'VolcEngine':
+        from .step023_asr_volcengine import volcengine_transcribe_audio
+        transcript = volcengine_transcribe_audio(wav_path, diarization=diarization)
     else:
         logger.error('Invalid ASR method')
         raise ValueError('Invalid ASR method')
